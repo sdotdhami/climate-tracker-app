@@ -1,17 +1,11 @@
 import streamlit as st
 import pandas as pd
 
-# ----------------------------------------------------------------------
-# This is your whole app. Streamlit re-runs this ENTIRE file, top to
-# bottom, every single time you click a button or type something.
-# That's normal -- it's just how Streamlit works.
-# ----------------------------------------------------------------------
+
 
 st.set_page_config(page_title="Climate Regulation Tracker", layout="centered")
 
-# --- Your Google Sheet details ---------------------------------------
-# GID is which TAB is open. Get it from the sheet's URL after "gid=".
-# Double check this points at the [Draft] Overview tab specifically.
+
 SHEET_ID = "1sRVlCyzbXiLKTk33dFeqxcz5WRdMNl2Wulo0QXnbNas"
 GID = "628203108"
 
@@ -24,7 +18,7 @@ def load_data():
     return df
 
 
-# --- Remember which "screen" we're on, across reruns ------------------
+
 if "screen" not in st.session_state:
     st.session_state.screen = "role"           # first time the app ever loads
 
@@ -33,9 +27,7 @@ def go_to(screen_name):
     st.session_state.screen = screen_name
 
 
-# ======================================================================
-# SCREEN 1 -- role picker (the landing page)
-# ======================================================================
+
 if st.session_state.screen == "role":
     st.title("Climate Regulation Tracker")
     st.write("Who's using this today?")
