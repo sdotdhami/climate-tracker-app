@@ -76,26 +76,32 @@ elif st.session_state.screen == "data":
         "PCF/LCA": "RefData: PCF/LCA",
     }
 
-    needed = {}       # scope -> [regulation names that need it - Recommended or Prescribed]
+    prescribed = {}   # scope -> [regulation names that MANDATE a specific dataset]
+    recommended = {}  # scope -> [regulation names that merely ADVISE a dataset, optional]
     unassessed = {}   # scope -> [regulation names where this is still blank]
 
     for _, row in country_df.iterrows():
         reg_name = row["Regulation/Standard/Framework"]
         for scope_label, col_name in ref_cols.items():
-            value = str(row.get(col_name, "")).strip()
-            # FIX: "Prescribed" was being silently dropped before -- it's the
-            # stronger of the two signals (a framework mandating a specific
-            # dataset), so it must count as "needed" just like "Recommended".
-            if value.lower() in ("recommended", "prescribed"):
-                needed.setdefault(scope_label, []).append(reg_name)
-            elif value == "" or value.lower() == "nan":
+            value = str(row.get(col_name, "")).strip().lower()
+            if value == "prescribed":
+                prescribed.setdefault(scope_label, []).append(reg_name)
+            elif value == "recommended":
+                recommended.setdefault(scope_label, []).append(reg_name)
+            elif value == "" or value == "nan":
                 unassessed.setdefault(scope_label, []).append(reg_name)
 
-    if needed:
-        st.write("**Collect reference data for:**")
-        for scope_label, regs in needed.items():
-            st.markdown(f"- **{scope_label}** — needed because of: {', '.join(regs)}")
-    else:
+    if prescribed:
+        st.write("**🔴 Must collect (Prescribed — mandatory):**")
+        for scope_label, regs in prescribed.items():
+            st.markdown(f"- **{scope_label}** — required by: {', '.join(regs)}")
+
+    if recommended:
+        st.write("**🟡 Should collect (Recommended — optional):**")
+        for scope_label, regs in recommended.items():
+            st.markdown(f"- **{scope_label}** — advised by: {', '.join(regs)}")
+
+    if not prescribed and not recommended:
         st.write("No confirmed reference-dataset needs for this country yet.")
 
     if unassessed:
