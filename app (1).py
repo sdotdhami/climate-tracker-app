@@ -28,7 +28,57 @@ def load_data():
     df.columns.values[22:26] = [
         "RefData: Scope 1", "RefData: Scope 2", "RefData: Scope 3", "RefData: PCF/LCA",
     ]
+    # Same duplicate-header problem again further right: "Fully/Partially/Not at
+    # all/Irrelevant" alignment ratings appear as TWO more Scope1+2/Scope3/PCF-LCA
+    # trios -- one for calculation methodology, one for reference datasets. Same
+    # position-based fix, same caveat about re-checking if the sheet layout changes.
+    df.columns.values[27:30] = [
+        "Alignment (Calc Method): Scope 1+2", "Alignment (Calc Method): Scope 3",
+        "Alignment (Calc Method): PCF/LCA",
+    ]
+    df.columns.values[30:33] = [
+        "Alignment (Ref Data): Scope 1+2", "Alignment (Ref Data): Scope 3",
+        "Alignment (Ref Data): PCF/LCA",
+    ]
     return df
+
+
+def alignment_chip(value):
+    """Turn a raw 'Fully'/'Partially'/'Not at all'/'Irrelevant' cell into a quick-glance chip."""
+    v = str(value).strip().lower()
+    if v == "fully":
+        return "🟢 Fully"
+    if v == "partially":
+        return "🟡 Partially"
+    if v == "not at all":
+        return "🔴 Not at all"
+    if v == "irrelevant":
+        return "⚪ Irrelevant"
+    return "❔ Not yet assessed"
+
+
+def alignment_summary(row):
+    """Build a copy-paste-ready sentence grouping the 6 alignment dimensions by status."""
+    dims = [
+        ("Scope 1+2 calc. methodology", "Alignment (Calc Method): Scope 1+2"),
+        ("Scope 3 calc. methodology", "Alignment (Calc Method): Scope 3"),
+        ("PCF/LCA calc. methodology", "Alignment (Calc Method): PCF/LCA"),
+        ("Scope 1+2 reference datasets", "Alignment (Ref Data): Scope 1+2"),
+        ("Scope 3 reference datasets", "Alignment (Ref Data): Scope 3"),
+        ("PCF/LCA reference datasets", "Alignment (Ref Data): PCF/LCA"),
+    ]
+    by_status = {}
+    for label, col_name in dims:
+        val = str(row.get(col_name, "")).strip()
+        status = val if val and val.lower() != "nan" else "Not yet assessed"
+        by_status.setdefault(status, []).append(label)
+
+    order = ["Fully", "Partially", "Not at all", "Irrelevant", "Not yet assessed"]
+    sentences = []
+    for status in order:
+        if status in by_status:
+            sentences.append(f"**{status}** on {', '.join(by_status[status])}")
+    return "; ".join(sentences) + "."
 
 
 if "screen" not in st.session_state:
@@ -123,13 +173,48 @@ elif st.session_state.screen == "sust":
 
     df = load_data()
     search = st.text_input("Framework name (e.g. JSE, ASRS, BRSR...)")
-    if search:
+
+    if not search:
+        st.caption("Type a name above to search.")
+    else:
         matches = df[
             df["Regulation/Standard/Framework"].str.contains(search, case=False, na=False)
         ]
-        st.dataframe(matches, use_container_width=True)
-    else:
-        st.caption("Type a name above to search.")
+
+        if matches.empty:
+            st.write("No matching framework found.")
+
+        for _, row in matches.iterrows():
+            st.subheader(row["Regulation/Standard/Framework"])
+            st.caption(f"{row['Country']} · {row['Sector']} · {row['Compliance']}")
+
+            # --- quick-glance chips: the fastest way to answer "are we aligned" ---
+            st.write("**How aligned is Unravel? (calculation methodology)**")
+            c1, c2, c3 = st.columns(3)
+            c1.markdown(f"Scope 1+2  \n{alignment_chip(row.get('Alignment (Calc Method): Scope 1+2'))}")
+            c2.markdown(f"Scope 3  \n{alignment_chip(row.get('Alignment (Calc Method): Scope 3'))}")
+            c3.markdown(f"PCF/LCA  \n{alignment_chip(row.get('Alignment (Calc Method): PCF/LCA'))}")
+
+            st.write("**Reference dataset alignment**")
+            c4, c5, c6 = st.columns(3)
+            c4.markdown(f"Scope 1+2  \n{alignment_chip(row.get('Alignment (Ref Data): Scope 1+2'))}")
+            c5.markdown(f"Scope 3  \n{alignment_chip(row.get('Alignment (Ref Data): Scope 3'))}")
+            c6.markdown(f"PCF/LCA  \n{alignment_chip(row.get('Alignment (Ref Data): PCF/LCA'))}")
+
+            # --- templated (not AI-generated) sentence, safe to paste into a client reply ---
+            st.write("**Summary — copy/paste for a client reply:**")
+            st.info(f"{row['Regulation/Standard/Framework']}: {alignment_summary(row)}")
+
+            # --- gap notes, only shown if the sheet actually has one ---
+            gap = str(row.get("Gap Analysis/ Other Remarks", "")).strip()
+            if gap and gap.lower() != "nan":
+                st.write("**Gap analysis / notes:**")
+                st.write(gap)
+
+            with st.expander("See full row detail"):
+                st.dataframe(row.to_frame().T, use_container_width=True)
+
+            st.divider()
 
 # ======================================================================
 # SCREEN 2c -- product team: placeholder for now, full table too
