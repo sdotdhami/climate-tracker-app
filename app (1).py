@@ -13,13 +13,7 @@ def load_data():
     df = pd.read_csv(url, skiprows=2)          # your real headers are on row 3
     df.columns = df.columns.str.strip()        # removes stray spaces in header names
 
-    # The sheet reuses "Scope 1 / 2 / 3 / PCF-LCA" as a column header THREE
-    # times for three different things (disclosure requirement, reference
-    # dataset need, Unravel's own coverage). Pandas can't tell those apart
-    # by name, so we rename the first two groups here by POSITION -- i.e.
-    # by which column number they are, left to right, based on the sheet's
-    # current layout. If someone adds/removes a column upstream in the
-    # Google Sheet, these numbers will need to be re-checked.
+
     df.columns.values[15:22] = [
         "Disclosure: Scope 1", "Disclosure: Scope 2", "Disclosure: Scope 3",
         "Disclosure: PCF/LCA", "Disclosure: Climate Risk",
@@ -28,10 +22,7 @@ def load_data():
     df.columns.values[22:26] = [
         "RefData: Scope 1", "RefData: Scope 2", "RefData: Scope 3", "RefData: PCF/LCA",
     ]
-    # Same duplicate-header problem again further right: "Fully/Partially/Not at
-    # all/Irrelevant" alignment ratings appear as TWO more Scope1+2/Scope3/PCF-LCA
-    # trios -- one for calculation methodology, one for reference datasets. Same
-    # position-based fix, same caveat about re-checking if the sheet layout changes.
+   
     df.columns.values[27:30] = [
         "Alignment (Calc Method): Scope 1+2", "Alignment (Calc Method): Scope 3",
         "Alignment (Calc Method): PCF/LCA",
@@ -223,7 +214,7 @@ elif st.session_state.screen == "product":
     if st.button("← back"):
         go_to("role")
     st.header("Aggregate view")
-    st.caption("Placeholder -- we'll build real counts/charts here next.")
+    st.caption("Placeholder.")
 
     df = load_data()
     st.dataframe(df, use_container_width=True)
