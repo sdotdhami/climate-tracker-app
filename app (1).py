@@ -202,7 +202,7 @@ elif st.session_state.screen == "sust":
             c6.markdown(f"PCF/LCA  \n{alignment_chip(row.get('Alignment (Ref Data): PCF/LCA'))}")
 
             # --- templated (not AI-generated) sentence, safe to paste into a client reply ---
-            st.write("**Summary — copy/paste for a client reply:**")
+            st.write("**Summary:**")
             st.info(f"{row['Regulation/Standard/Framework']}: {alignment_summary(row)}")
 
             # --- gap notes, only shown if the sheet actually has one ---
