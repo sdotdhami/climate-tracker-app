@@ -76,14 +76,17 @@ elif st.session_state.screen == "data":
         "PCF/LCA": "RefData: PCF/LCA",
     }
 
-    needed = {}       # scope -> [regulation names that need it]
+    needed = {}       # scope -> [regulation names that need it - Recommended or Prescribed]
     unassessed = {}   # scope -> [regulation names where this is still blank]
 
     for _, row in country_df.iterrows():
         reg_name = row["Regulation/Standard/Framework"]
         for scope_label, col_name in ref_cols.items():
             value = str(row.get(col_name, "")).strip()
-            if value.lower() == "recommended":
+            # FIX: "Prescribed" was being silently dropped before -- it's the
+            # stronger of the two signals (a framework mandating a specific
+            # dataset), so it must count as "needed" just like "Recommended".
+            if value.lower() in ("recommended", "prescribed"):
                 needed.setdefault(scope_label, []).append(reg_name)
             elif value == "" or value.lower() == "nan":
                 unassessed.setdefault(scope_label, []).append(reg_name)
