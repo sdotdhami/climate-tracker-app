@@ -173,26 +173,30 @@ def gather_source_text(main_url):
     return "\n\n".join(chunks), followed
 
 
-def extract_regulations(source_text, api_key, model="gpt-oss-120b"):
-    """Send the gathered text to Cerebras and parse the JSON array it returns."""
+def extract_regulations(source_text, api_key, model="gemini-3.5-flash"):
+    """Send the gathered text to Gemini and parse the JSON array it returns."""
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
     resp = requests.post(
-        "https://api.cerebras.ai/v1/chat/completions",
-        headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+        url,
+        headers={"x-goog-api-key": api_key, "Content-Type": "application/json"},
         json={
-            "model": model,
-            "messages": [
-                {"role": "system", "content": EXTRACTION_SYSTEM_PROMPT},
-                {"role": "user", "content": source_text},
-            ],
-            "temperature": 0,
+            "system_instruction": {"parts": [{"text": EXTRACTION_SYSTEM_PROMPT}]},
+            "contents": [{"role": "user", "parts": [{"text": source_text}]}],
+            "generationConfig": {"temperature": 0},
         },
         timeout=60,
     )
     if not resp.ok:
-        # Surface Cerebras's actual error body -- raise_for_status() alone only
-        # gives a generic "404 Client Error" with no explanation of *why*.
-        raise RuntimeError(f"Cerebras API error {resp.status_code}: {resp.text}")
-    content = resp.json()["choices"][0]["message"]["content"].strip()
+        # Surface Google's actual error body -- a bare status code alone
+        # doesn't say whether it's billing, a bad model name, or something else.
+        raise RuntimeError(f"Gemini API error {resp.status_code}: {resp.text}")
+
+    data = resp.json()
+    try:
+        content = data["candidates"][0]["content"]["parts"][0]["text"].strip()
+    except (KeyError, IndexError):
+        raise RuntimeError(f"Unexpected Gemini response shape: {data}")
+
     if content.startswith("```"):
         content = re.sub(r"^```(json)?|```$", "", content, flags=re.MULTILINE).strip()
     return json.loads(content)
@@ -380,10 +384,10 @@ elif st.session_state.screen == "extract":
 
         try:
             with st.spinner("Extracting data (this calls the AI, takes a few seconds)..."):
-                api_key = st.secrets["CEREBRAS_API_KEY"]  # set in Streamlit Cloud's app Secrets
+                api_key = st.secrets["GEMINI_API_KEY"]  # set in Streamlit Cloud's app Secrets
                 results = extract_regulations(source_text, api_key)
         except KeyError:
-            st.error("No Cerebras API key found. Add CEREBRAS_API_KEY in the app's Secrets settings.")
+            st.error("No Gemini API key found. Add GEMINI_API_KEY in the app's Secrets settings.")
             st.stop()
         except Exception as e:
             st.error(f"Extraction failed: {e}")
