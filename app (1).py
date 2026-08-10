@@ -173,7 +173,7 @@ def gather_source_text(main_url):
     return "\n\n".join(chunks), followed
 
 
-def extract_regulations(source_text, api_key, model="llama-3.3-70b"):
+def extract_regulations(source_text, api_key, model="gpt-oss-120b"):
     """Send the gathered text to Cerebras and parse the JSON array it returns."""
     resp = requests.post(
         "https://api.cerebras.ai/v1/chat/completions",
@@ -188,7 +188,10 @@ def extract_regulations(source_text, api_key, model="llama-3.3-70b"):
         },
         timeout=60,
     )
-    resp.raise_for_status()
+    if not resp.ok:
+        # Surface Cerebras's actual error body -- raise_for_status() alone only
+        # gives a generic "404 Client Error" with no explanation of *why*.
+        raise RuntimeError(f"Cerebras API error {resp.status_code}: {resp.text}")
     content = resp.json()["choices"][0]["message"]["content"].strip()
     if content.startswith("```"):
         content = re.sub(r"^```(json)?|```$", "", content, flags=re.MULTILINE).strip()
