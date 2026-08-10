@@ -184,7 +184,7 @@ def extract_regulations(source_text, api_key, model="gemini-3.5-flash"):
             "contents": [{"role": "user", "parts": [{"text": source_text}]}],
             "generationConfig": {"temperature": 0},
         },
-        timeout=60,
+        timeout=150,
     )
     if not resp.ok:
         # Surface Google's actual error body -- a bare status code alone
@@ -383,7 +383,7 @@ elif st.session_state.screen == "extract":
                 st.caption(f"— {link}")
 
         try:
-            with st.spinner("Extracting data (this calls the AI, takes a few seconds)..."):
+            with st.spinner("Extracting data (larger pages with several linked sources can take a minute or two)..."):
                 api_key = st.secrets["GEMINI_API_KEY"]  # set in Streamlit Cloud's app Secrets
                 results = extract_regulations(source_text, api_key)
         except KeyError:
